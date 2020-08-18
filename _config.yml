@@ -1,0 +1,9 @@
+deploy:
+  oss:
+    endpoint: ""
+    bucket_name: ""
+  paths:
+    - "_site"
+  skip_exist: false
+  cache:
+    time: ""
