@@ -9,6 +9,7 @@ class Deploy
     @access_key_secret = secret
     @endpoint          = params[:endpoint]
     @bucket_name       = params[:bucket_name]
+    @params            = params
   end
 
   def client
@@ -44,7 +45,27 @@ class Deploy
     files.compact
   end
 
-  def upload(paths, files)
-    objects = local_objects(paths, files)
+  def upload(paths)
+    objects = local_objects(paths)
+    puts objects
+    objects.each do |object|
+      @bucket.put_object(
+        remote_path(object),
+        :file => object,
+        :metas => get_metas(params["expired_in"])
+      )
+    end
+  end
+
+  # 计算缓存头部（默认为1年）
+  def get_metas(days = 365)
+    today = Date.today
+    expire_date = today + days
+    expired = expire_date.to_time.getgm
+    max_age = days * 24 * 60 * 60
+    return {
+      "Cache-Control": "max-age=" + max_age,
+      "Expires": expired
+    }
   end
 end

@@ -8,12 +8,34 @@ class JekyllDeployOss < Jekyll::Command
         c.description 'Deploy Jekyll site to Aliyun OSS.'
         c.alias :d
 
-        c.option 'dest', '-d DEST', 'Where the site should go.'
-
         c.action do |args, options|
-          #Jekyll::Site.new_site_at(options['dest'])
+          deploy
         end
       end
+    end
+
+    def deploy
+      @options = Jekyll.configuration
+      @params = @options["deploy"] || {}
+      deploy = Deploy.new(
+        ENV['OSS_ID'],
+        ENV["OSS_SECRET"],
+        @params
+      )
+      deploy.upload(get_paths)
+    end
+
+    def get_paths
+      dir = @options["destination"]
+      paths = []
+      if @params["paths"]
+        @params["paths"].each do |path|
+          paths << File.join(dir, path)
+        end
+      else
+        paths << dir
+      end
+      paths
     end
   end
 end

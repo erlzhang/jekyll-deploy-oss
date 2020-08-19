@@ -1,9 +1,5 @@
 deploy:
-  oss:
-    endpoint: ""
-    bucket_name: ""
-  paths:
-    - "_site"
+  endpoint: ""
+  bucket_name: ""
   skip_exist: false
-  cache:
-    time: ""
+  expired_in: 3650
