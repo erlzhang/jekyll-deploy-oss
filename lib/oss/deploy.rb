@@ -1,15 +1,17 @@
 require 'aliyun/oss'
 require 'find'
+require 'date'
 
 class Deploy
-  attr_reader :access_key_id, :access_key_secret, :endpoint, :bucket_name
+  attr_reader :access_key_id, :access_key_secret, :endpoint, :bucket_name, :expired_in
 
   def initialize(id, secret, params = {})
+    puts params
     @access_key_id     = id
     @access_key_secret = secret
-    @endpoint          = params[:endpoint]
-    @bucket_name       = params[:bucket_name]
-    @params            = params
+    @endpoint          = params["endpoint"]
+    @bucket_name       = params["bucket_name"]
+    @expired_in        = params["expired_in"] || 365
   end
 
   def client
@@ -21,6 +23,7 @@ class Deploy
   end
 
   def bucket
+    puts bucket_name
     @bucket ||= client.get_bucket(bucket_name)
   end
 
@@ -39,32 +42,38 @@ class Deploy
       if File.file?(path)
         files << path
       elsif File.directory?(path)
-        Find.find(path) { |file| files << file if File.file?(file) }
+        Find.find(path) do |file|
+          files << file if File.file?(file)
+        end
       end
     end
     files.compact
   end
 
-  def upload(paths)
+  def upload(paths, remote_path)
+    if !bucket
+      puts "No valid Bucket!"
+      return
+    end
+
     objects = local_objects(paths)
-    puts objects
     objects.each do |object|
-      @bucket.put_object(
-        remote_path(object),
-        :file => object,
-        :metas => get_metas(params["expired_in"])
+      bucket.put_object(
+        remote,
+        :file => remote_path.call(object),
+        :metas => get_metas(expired_in)
       )
     end
   end
 
   # 计算缓存头部（默认为1年）
-  def get_metas(days = 365)
+  def get_metas(days)
     today = Date.today
-    expire_date = today + days
+    expire_date = Date.today + days.to_i
     expired = expire_date.to_time.getgm
-    max_age = days * 24 * 60 * 60
+    max_age = days.to_i * 24 * 60 * 60
     return {
-      "Cache-Control": "max-age=" + max_age,
+      "Cache-Control": "max-age=" + max_age.to_s,
       "Expires": expired
     }
   end

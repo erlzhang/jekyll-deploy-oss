@@ -9,20 +9,27 @@ class JekyllDeployOss < Jekyll::Command
         c.alias :d
 
         c.action do |args, options|
-          deploy
+          deploy_site
         end
       end
     end
 
-    def deploy
+    def deploy_site
       @options = Jekyll.configuration
       @params = @options["deploy"] || {}
       deploy = Deploy.new(
-        ENV['OSS_ID'],
-        ENV["OSS_SECRET"],
+        #ENV['OSS_ID'],
+        #ENV["OSS_SECRET"],
+        @params["OSS_ID"],
+        @params["OSS_SECRET"],
         @params
       )
-      deploy.upload(get_paths)
+      remote_path = Proc.new do |path|
+        object = path.sub(@options["destination"], "")
+        object[0] === "/" ? object.sub("/", "") : object
+      end
+
+      deploy.upload(get_paths, remote_path)
     end
 
     def get_paths
