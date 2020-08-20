@@ -12,6 +12,7 @@ class Deploy
     @endpoint          = params["endpoint"]
     @bucket_name       = params["bucket_name"]
     @expired_in        = params["expired_in"] || 365
+    @skip_exist        = params["skip_exist"]
   end
 
   def client
@@ -23,7 +24,6 @@ class Deploy
   end
 
   def bucket
-    puts bucket_name
     @bucket ||= client.get_bucket(bucket_name)
   end
 
@@ -59,22 +59,23 @@ class Deploy
     objects = local_objects(paths)
     objects.each do |object|
       bucket.put_object(
-        remote,
-        :file => remote_path.call(object),
-        :metas => get_metas(expired_in)
+        remote_path.call(object),
+        :file => object,
+        :headers => {
+          "Cache-Control": cache_control,
+          "Expires": expires
+        }
       )
     end
   end
 
-  # 计算缓存头部（默认为1年）
-  def get_metas(days)
-    today = Date.today
-    expire_date = Date.today + days.to_i
-    expired = expire_date.to_time.getgm
-    max_age = days.to_i * 24 * 60 * 60
-    return {
-      "Cache-Control": "max-age=" + max_age.to_s,
-      "Expires": expired
-    }
+  def cache_control
+    max_age = expired_in.to_i * 24 * 60 * 60
+    "max-age=" + max_age.to_s
+  end
+
+  def expires
+    expire_date = Date.today + expired_in.to_i
+    expire_date.to_time.getgm
   end
 end
