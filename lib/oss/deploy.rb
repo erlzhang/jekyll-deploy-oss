@@ -1,14 +1,14 @@
 require 'aliyun/oss'
 require 'find'
 require 'date'
+require 'jekyll'
 
 class Deploy
-  attr_reader :access_key_id, :access_key_secret, :endpoint, :bucket_name, :expired_in
+  attr_reader :access_key_id, :access_key_secret, :endpoint, :bucket_name, :expired_in, :skip_exist
 
-  def initialize(id, secret, params = {})
-    puts params
-    @access_key_id     = id
-    @access_key_secret = secret
+  def initialize(params = {})
+    @access_key_id     = params["OSS_ID"]
+    @access_key_secret = params["OSS_SECRET"]
     @endpoint          = params["endpoint"]
     @bucket_name       = params["bucket_name"]
     @expired_in        = params["expired_in"] || 365
@@ -51,15 +51,16 @@ class Deploy
   end
 
   def upload(paths, remote_path)
-    if !bucket
-      puts "No valid Bucket!"
-      return
-    end
-
     objects = local_objects(paths)
     objects.each do |object|
+      remote = remote_path.call(object)
+      if skip_exist and remote_objects.include?(remote)
+        Jekyll.logger.info "Skip exist file: #{remote}"
+        next
+      end
+      Jekyll.logger.info "Upload file: #{remote}"
       bucket.put_object(
-        remote_path.call(object),
+        remote,
         :file => object,
         :headers => {
           "Cache-Control": cache_control,
