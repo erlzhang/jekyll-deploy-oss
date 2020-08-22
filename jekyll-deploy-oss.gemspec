@@ -14,5 +14,5 @@ Gem::Specification.new do |spec|
 
   spec.add_dependency "jekyll", ">= 3.7", "< 5.0"
 
-  spec.add_runtime_dependency "aliyun-sdk"
+  spec.add_runtime_dependency "aliyun-sdk", "~> 0.7"
 end
